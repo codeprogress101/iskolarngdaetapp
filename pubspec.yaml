@@ -1,0 +1,36 @@
+name: ldsp_applicant
+description: LDSP Applicant mobile app
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.9.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  supabase_flutter: any
+  flutter_dotenv: any
+  go_router: any
+  file_picker: ^8.1.2
+  flutter_local_notifications: ^17.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.13.0
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/reference/img/lds.png"
+
+flutter:
+  uses-material-design: true
+  assets:
+    - .env
+    - assets/reference/daet_barangays.txt
+    - assets/reference/img/
