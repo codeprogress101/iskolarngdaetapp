@@ -13,21 +13,31 @@ import '../features/auth/forgot_password_page.dart';
 import '../features/auth/login_page.dart';
 import '../features/auth/register_page.dart';
 import '../features/auth/reset_password_page.dart';
+import '../features/auth/verify_email_otp_page.dart';
 import '../features/dashboard/dashboard_page.dart';
 import '../features/notifications/notifications_page.dart';
 import '../features/splash/splash_page.dart';
 
+final _authRefreshListenable = _AuthStateRefreshListenable(
+  Supabase.instance.client.auth.onAuthStateChange,
+);
+
 final GoRouter appRouter = GoRouter(
   initialLocation: '/',
-  refreshListenable: _AuthStateRefreshListenable(
-    Supabase.instance.client.auth.onAuthStateChange,
-  ),
+  refreshListenable: _authRefreshListenable,
   redirect: (context, state) async {
     final location = state.matchedLocation;
+    final isDeepLinkRecovery =
+        state.uri.scheme == 'ldspapp' && state.uri.host == 'reset-password';
+    final isDeepLinkRegistrationVerify =
+        state.uri.scheme == 'ldspapp' &&
+        state.uri.host == 'login' &&
+        state.uri.queryParameters['mode'] == 'verify';
     final isAuthPage =
         location == '/login' ||
         location == '/register' ||
-        location == '/forgot-password';
+        location == '/forgot-password' ||
+        location == '/verify-email-otp';
     final isRegisterPage = location == '/register';
     final isResetPasswordPage = location == '/reset-password';
     final isNewApplicationEditPage = location == '/applications/new/edit';
@@ -42,6 +52,18 @@ final GoRouter appRouter = GoRouter(
     final user = supabase.auth.currentUser;
     final registerPolicy = await _resolveRegistrationRouteAccess();
     final intakePolicy = await _resolveApplicationIntakeRouteAccess();
+
+    if (isDeepLinkRegistrationVerify) {
+      await supabase.auth.signOut();
+      return '/login?message=${Uri.encodeComponent("Email verified successfully. Please sign in.")}';
+    }
+
+    if (isDeepLinkRecovery || _authRefreshListenable.hasPendingRecovery) {
+      _authRefreshListenable.consumePendingRecovery();
+      if (!isResetPasswordPage) {
+        return '/reset-password?mode=recovery';
+      }
+    }
 
     if (isRegisterPage && !registerPolicy.isAllowed) {
       final reason = Uri.encodeComponent(registerPolicy.message);
@@ -86,7 +108,13 @@ final GoRouter appRouter = GoRouter(
       path: '/login',
       builder: (context, state) {
         final message = state.uri.queryParameters['message'];
-        return LoginPage(initialMessage: message);
+        final mode = state.uri.queryParameters['mode'];
+        final initialMessage =
+            message ??
+            (mode == 'verify'
+                ? 'Email verified successfully. Please sign in.'
+                : null);
+        return LoginPage(initialMessage: initialMessage);
       },
     ),
     GoRoute(
@@ -98,8 +126,18 @@ final GoRouter appRouter = GoRouter(
       builder: (context, state) => const ForgotPasswordPage(),
     ),
     GoRoute(
+      path: '/verify-email-otp',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'];
+        return VerifyEmailOtpPage(initialEmail: email);
+      },
+    ),
+    GoRoute(
       path: '/reset-password',
-      builder: (context, state) => const ResetPasswordPage(),
+      builder: (context, state) {
+        final mode = state.uri.queryParameters['mode'] ?? '';
+        return ResetPasswordPage(fromRecoveryLink: mode == 'recovery');
+      },
     ),
     GoRoute(
       path: '/dashboard',
@@ -145,12 +183,25 @@ final GoRouter appRouter = GoRouter(
 
 class _AuthStateRefreshListenable extends ChangeNotifier {
   _AuthStateRefreshListenable(Stream<dynamic> stream) {
-    _subscription = stream.asBroadcastStream().listen((_) {
+    _subscription = stream.asBroadcastStream().listen((event) {
+      if (event is AuthState) {
+        final authState = event;
+        if (authState.event == AuthChangeEvent.passwordRecovery) {
+          _pendingRecovery = true;
+        }
+      }
       notifyListeners();
     });
   }
 
   late final StreamSubscription<dynamic> _subscription;
+  bool _pendingRecovery = false;
+
+  bool get hasPendingRecovery => _pendingRecovery;
+
+  void consumePendingRecovery() {
+    _pendingRecovery = false;
+  }
 
   @override
   void dispose() {

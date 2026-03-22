@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -217,6 +218,7 @@ class _RegisterPageState extends State<RegisterPage> {
       final authResponse = await supabase.auth.signUp(
         email: email,
         password: _passwordController.text,
+        emailRedirectTo: _resolveEmailConfirmRedirectUrl(),
         data: <String, dynamic>{
           'first_name': firstName,
           'last_name': lastName,
@@ -272,6 +274,13 @@ class _RegisterPageState extends State<RegisterPage> {
         });
       }
     }
+  }
+
+  String _resolveEmailConfirmRedirectUrl() {
+    if (kIsWeb) {
+      return Uri.base.resolve('login?mode=verify').toString();
+    }
+    return 'ldspapp://login?mode=verify';
   }
 
   @override
@@ -482,6 +491,21 @@ class _RegisterPageState extends State<RegisterPage> {
                               ? 'Sending...'
                               : 'Resend Confirmation Email'),
                   ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: _loading
+                      ? null
+                      : () {
+                          final email = Uri.encodeQueryComponent(
+                            (_verificationEmail ?? '').trim(),
+                          );
+                          context.push('/verify-email-otp?email=$email');
+                        },
+                  child: const Text('Verify with OTP Code'),
                 ),
               ),
             ],

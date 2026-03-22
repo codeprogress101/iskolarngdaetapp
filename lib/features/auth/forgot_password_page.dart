@@ -32,9 +32,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   String _resolveRedirectUrl() {
     if (kIsWeb) {
-      return '${Uri.base.origin}/reset-password';
+      return Uri.base.resolve('reset-password').toString();
     }
-    return 'ldspapp://reset-password';
+    return 'ldspapp://reset-password?mode=recovery';
   }
 
   Future<void> _sendRecoveryEmail() async {
@@ -112,11 +112,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
             ),
             const SizedBox(height: 14),
             if (_success != null) ...[
-              AuthMessageBanner(message: _success!, type: AuthBannerType.success),
+              AuthMessageBanner(
+                message: _success!,
+                type: AuthBannerType.success,
+              ),
               const SizedBox(height: 12),
             ],
             if (_warning != null) ...[
-              AuthMessageBanner(message: _warning!, type: AuthBannerType.warning),
+              AuthMessageBanner(
+                message: _warning!,
+                type: AuthBannerType.warning,
+              ),
               const SizedBox(height: 12),
             ],
             if (_error != null) ...[

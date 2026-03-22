@@ -9,7 +9,9 @@ import 'widgets/auth_scaffold.dart';
 import 'widgets/password_field.dart';
 
 class ResetPasswordPage extends StatefulWidget {
-  const ResetPasswordPage({super.key});
+  const ResetPasswordPage({super.key, this.fromRecoveryLink = false});
+
+  final bool fromRecoveryLink;
 
   @override
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
@@ -55,6 +57,11 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           _warning =
               'No active recovery session found. Use Forgot Password again.';
         });
+      } else if (!widget.fromRecoveryLink) {
+        setState(() {
+          _warning =
+              'Open this page from your email reset link to continue password recovery.';
+        });
       }
     } catch (e) {
       if (!mounted) return;
@@ -77,7 +84,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
     final currentSession = Supabase.instance.client.auth.currentSession;
     if (currentSession == null) {
       setState(() {
-        _warning = 'No active recovery session found. Use Forgot Password again.';
+        _warning =
+            'No active recovery session found. Use Forgot Password again.';
       });
       return;
     }
@@ -132,8 +140,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const AuthHeader(
-              title: 'Reset Password',
-              subtitle: 'Set a new secure password',
+              title: 'Set New Password',
+              subtitle: 'Enter your new password to complete account recovery.',
             ),
             const SizedBox(height: 24),
             PasswordField(
@@ -159,8 +167,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                   _obscureConfirmPassword = !_obscureConfirmPassword;
                 });
               },
-              validator: (value) =>
-                  AuthValidators.confirmPassword(value, _passwordController.text),
+              validator: (value) => AuthValidators.confirmPassword(
+                value,
+                _passwordController.text,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Use at least 12 characters with uppercase, lowercase, number, and symbol.',
+              style: Theme.of(context).textTheme.bodyMedium,
             ),
             const SizedBox(height: 10),
             if (_checkingSession)

@@ -390,6 +390,12 @@ class _LoginPageState extends State<LoginPage> {
                 'Need an account? Register as Scholarship Applicant',
               ),
             ),
+            TextButton(
+              onPressed: _loading
+                  ? null
+                  : () => context.push('/verify-email-otp'),
+              child: const Text('Already have a code? Verify with OTP'),
+            ),
           ],
         ),
       ),
