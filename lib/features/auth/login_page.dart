@@ -195,12 +195,12 @@ class _LoginPageState extends State<LoginPage> {
         throw Exception('Login failed. No authenticated user returned.');
       }
 
-      final profile = await _loadOrCreateProfile(user: user);
+      final profile = await _loadProfile(user: user);
 
       if (profile == null) {
         await supabase.auth.signOut();
         throw Exception(
-          'Login succeeded, but no matching profile was found in the profiles table for this account.',
+          'Login succeeded, but no matching applicant profile was found for this account. Please contact LDSP support.',
         );
       }
 
@@ -402,34 +402,11 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<Map<String, dynamic>?> _loadOrCreateProfile({
+  Future<Map<String, dynamic>?> _loadProfile({
     required User user,
   }) async {
     final supabase = Supabase.instance.client;
-    var profile = await supabase
-        .from('profiles')
-        .select('id, role, is_active, first_name, last_name, email')
-        .eq('id', user.id)
-        .maybeSingle();
-    if (profile != null) return Map<String, dynamic>.from(profile);
-
-    final metadata = user.userMetadata ?? const <String, dynamic>{};
-    final fallbackFirstName = (metadata['first_name'] ?? '').toString().trim();
-    final fallbackLastName = (metadata['last_name'] ?? '').toString().trim();
-    final fallbackMobile = (metadata['mobile_number'] ?? '').toString().trim();
-    final fallbackEmail = (user.email ?? '').trim().toLowerCase();
-
-    await supabase.from('profiles').upsert(<String, dynamic>{
-      'id': user.id,
-      'email': fallbackEmail,
-      'first_name': fallbackFirstName,
-      'last_name': fallbackLastName,
-      'mobile_number': fallbackMobile,
-      'role': 'applicant',
-      'is_active': true,
-    }, onConflict: 'id');
-
-    profile = await supabase
+    final profile = await supabase
         .from('profiles')
         .select('id, role, is_active, first_name, last_name, email')
         .eq('id', user.id)
